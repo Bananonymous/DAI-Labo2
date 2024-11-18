@@ -10,7 +10,7 @@ import java.util.concurrent.Callable;
 import picocli.CommandLine;
 
 enum ClientCommand {
-  SND_MSG,
+  MSG,
   RECV_MSG,
   CREATE_ROOM,
   HELP,
@@ -38,6 +38,7 @@ public class Client implements Callable<Integer> {
       defaultValue = "4242")
   protected int port;
 
+
   @Override
   public Integer call() {
     String END_OF_LINE = "\n";
@@ -49,15 +50,20 @@ public class Client implements Callable<Integer> {
          BufferedReader in = new BufferedReader(reader);
          Writer writer = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8);
          BufferedWriter out = new BufferedWriter(writer)) {
+
       System.out.println("[Client] Connected to " + host + ":" + port);
       System.out.println();
 
       // Display help message
       help();
 
-      // Run REPL until user quits
+      // Start a thread to listen for multicast messages
+      Thread multicastListener = new Thread(this::listenToMulticast);
+      multicastListener.setDaemon(true);
+      multicastListener.start();
+
+      // Main loop for user commands
       while (!socket.isClosed()) {
-        // Display prompt
         System.out.print("> ");
 
         // Read user input
@@ -66,46 +72,16 @@ public class Client implements Callable<Integer> {
         String userInput = bir.readLine();
 
         try {
-          // Split user input to parse command (also known as message)
+          // Split user input to parse command
           String[] userInputParts = userInput.split(" ", 2);
           ClientCommand command = ClientCommand.valueOf(userInputParts[0].toUpperCase());
 
-          // Prepare request
           String request = null;
-
           switch (command) {
-            case SND_MSG -> {
+            case MSG -> {
               String msg = userInputParts[1];
-
-              request = ClientCommand.SND_MSG + " " + msg;
+              request = ClientCommand.MSG + " " + msg;
             }
-
-            //Receiving message using multicast ("230.0.0.0") and udp port 4343
-            case RECV_MSG -> {
-              String multicastAddress = "230.0.0.0";
-              int multicastPort = 4343;
-
-              try (MulticastSocket multicastSocket = new MulticastSocket(multicastPort)) {
-                InetAddress group = InetAddress.getByName(multicastAddress);
-                multicastSocket.joinGroup(group);
-                System.out.println("[Client] Joined multicast group " + multicastAddress + ":" + multicastPort);
-
-                System.out.println("[Client] Listening for messages...");
-                while (true) { // Continuous listening
-                  byte[] buf = new byte[256];
-                  DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                  multicastSocket.receive(packet);
-
-                  String received = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
-                  System.out.println("[Client] Received message: " + received);
-                }
-              } catch (IOException e) {
-                System.out.println("[Client] Error receiving multicast message: " + e.getMessage());
-              }
-            }
-
-
-
             case QUIT -> {
               socket.close();
               continue;
@@ -114,77 +90,59 @@ public class Client implements Callable<Integer> {
           }
 
           if (request != null) {
-            // Send request to server
             out.write(request + END_OF_LINE);
             out.flush();
           }
         } catch (Exception e) {
           System.out.println("Invalid command. Please try again.");
-          continue;
         }
 
-        // Read response from server and parse it
+        // Read server response
         String serverResponse = in.readLine();
-
-        // If serverResponse is null, the server has disconnected
         if (serverResponse == null) {
           socket.close();
           continue;
         }
 
-        // Split response to parse message (also known as command)
-        String[] serverResponseParts = serverResponse.split(" ", 2);
-
-        ServerCommand message = null;
-        try {
-          message = ServerCommand.valueOf(serverResponseParts[0]);
-        } catch (IllegalArgumentException e) {
-          // Do nothing
-        }
-
-        // Handle response from server
-        switch (message) {
-          case OK -> {
-            // As we know from the server implementation, the message is always the second part
-            String helloMessage = serverResponseParts[1];
-            System.out.println(helloMessage);
-          }
-          case INVALID -> {
-            if (serverResponseParts.length < 2) {
-              System.out.println("Invalid message. Please try again.");
-              break;
-            }
-
-            String invalidMessage = serverResponseParts[1];
-            System.out.println(invalidMessage);
-          }
-
-          case SENDING_MSG -> {
-            if (serverResponseParts.length < 2) {
-              System.out.println("Invalid message. Please try again.");
-              break;
-            }
-
-            String sendingMessage = serverResponseParts[1];
-            System.out.println(sendingMessage);
-          }
-          case null, default ->
-                  System.out.println("Invalid/unknown command sent by server, ignore.");
-        }
+        // Handle server response
+        System.out.println("[Server] " + serverResponse);
       }
 
       System.out.println("[Client] Closing connection and quitting...");
     } catch (Exception e) {
-      System.out.println("[Client] Exception: " + e);
+      System.out.println("[Client] Exception: " + e.getMessage());
     }
-
 
     return 0;
   }
 
+  // Multicast listening thread
+  private void listenToMulticast() {
+    String multicastAddress = "230.0.0.0";
+    int multicastPort = 4343;
+
+    try (MulticastSocket multicastSocket = new MulticastSocket(multicastPort)) {
+      InetAddress group = InetAddress.getByName(multicastAddress);
+      multicastSocket.joinGroup(group);
+      System.out.println("[Client] Listening to multicast messages...");
+
+      while (true) {
+        byte[] buf = new byte[256];
+        DatagramPacket packet = new DatagramPacket(buf, buf.length);
+        multicastSocket.receive(packet);
+
+        String received = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
+        System.out.println("[Multicast] Received message: " + received);
+      }
+    } catch (IOException e) {
+      System.out.println("[Client] Error in multicast listener: " + e.getMessage());
+    }
+  }
+
+
   private static void help() {
     System.out.println("Usage:");
-    System.out.println("  " + ClientCommand.SND_MSG + " <msg> - Send message in current room.");
+    System.out.println("  " + ClientCommand.MSG + " <msg> - Send message in current room.");
     System.out.println("  " + ClientCommand.QUIT + " - Close the connection to the server.");
     System.out.println("  " + ClientCommand.HELP + " - Display this help message.");
   }
