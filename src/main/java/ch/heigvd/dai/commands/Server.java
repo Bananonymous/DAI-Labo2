@@ -68,18 +68,20 @@ public class Server implements Callable<Integer> {
 
   private void sendMulticastMessage(String msg) {
     String multicastAddress = "230.0.0.0";
-    System.out.println("[Server] Sending message to multicast group: " + msg);
     int multicastPort = 4343;
+
     try (MulticastSocket multicastSocket = new MulticastSocket()) {
       InetAddress group = InetAddress.getByName(multicastAddress);
       byte[] buf = msg.getBytes(StandardCharsets.UTF_8);
       DatagramPacket packet = new DatagramPacket(buf, buf.length, group, multicastPort);
+
       multicastSocket.send(packet);
-      System.out.println("[Server] Message sent to multicast group");
+      System.out.println("[Server] Sent multicast message: " + packet);
     } catch (IOException e) {
       System.out.println("[Server] Error sending multicast message: " + e.getMessage());
     }
   }
+
 
   @Override
   public Integer call() {

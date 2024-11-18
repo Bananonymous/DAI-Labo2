@@ -124,11 +124,12 @@ public class Client implements Callable<Integer> {
     try (MulticastSocket multicastSocket = new MulticastSocket(multicastPort)) {
       InetAddress group = InetAddress.getByName(multicastAddress);
       multicastSocket.joinGroup(group);
-      System.out.println("[Client] Listening to multicast messages...");
-
       while (true) {
         byte[] buf = new byte[256];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
+
+        System.out.println("[Client] Listening to multicast messages...");
+
         multicastSocket.receive(packet);
 
         String received = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
