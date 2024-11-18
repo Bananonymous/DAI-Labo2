@@ -70,13 +70,13 @@ public class Server implements Callable<Integer> {
     String multicastAddress = "230.0.0.0";
     int multicastPort = 4343;
 
-    try (MulticastSocket multicastSocket = new MulticastSocket()) {
+    try (DatagramSocket multicastSocket = new DatagramSocket()) {
       InetAddress group = InetAddress.getByName(multicastAddress);
       byte[] buf = msg.getBytes(StandardCharsets.UTF_8);
       DatagramPacket packet = new DatagramPacket(buf, buf.length, group, multicastPort);
 
       multicastSocket.send(packet);
-      System.out.println("[Server] Sent multicast message: " + packet);
+      System.out.println("[Server] Sent multicast message: " + msg);
     } catch (IOException e) {
       System.out.println("[Server] Error sending multicast message: " + e.getMessage());
     }

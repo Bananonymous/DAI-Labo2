@@ -1,10 +1,7 @@
 package ch.heigvd.dai.commands;
 
 import java.io.*;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.MulticastSocket;
-import java.net.Socket;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
@@ -118,12 +115,18 @@ public class Client implements Callable<Integer> {
 
   // Multicast listening thread
   private void listenToMulticast() {
-    String multicastAddress = "230.0.0.0";
+    String multicastAddressString = "230.0.0.0";
     int multicastPort = 4343;
 
+    String NETWORK_INTERFACE = "wlan0";
+
+
+
     try (MulticastSocket multicastSocket = new MulticastSocket(multicastPort)) {
-      InetAddress group = InetAddress.getByName(multicastAddress);
-      multicastSocket.joinGroup(group);
+      InetAddress multicastAddress = InetAddress.getByName(multicastAddressString);
+      NetworkInterface networkInterface = NetworkInterface.getByName(NETWORK_INTERFACE);
+      InetSocketAddress multicastGroup = new InetSocketAddress(multicastAddress, multicastPort);
+      multicastSocket.joinGroup(multicastGroup, networkInterface);
       while (true) {
         byte[] buf = new byte[256];
         DatagramPacket packet = new DatagramPacket(buf, buf.length);
@@ -133,7 +136,7 @@ public class Client implements Callable<Integer> {
         multicastSocket.receive(packet);
 
         String received = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
-        System.out.println("[Multicast] Received message: " + received);
+        System.out.println("Received message: " + received);
       }
     } catch (IOException e) {
       System.out.println("[Client] Error in multicast listener: " + e.getMessage());
