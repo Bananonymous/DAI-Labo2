@@ -1,10 +1,10 @@
-# DAI 2024-2025 - Practical Work 2: YASMA - Yet Another Simple Messaging System
+# DAI 2024-2025 - Practical Work 2: YASMA - Yet Another Simple Messaging Application
 
 Based on the Java Template [Java TCP programming](https://github.com/heig-vd-dai-course/heig-vd-dai-course/blob/main/12-java-tcp-programming).
 
 ## Project Overview
 
-This project is a simple messaging system designed as part of the DAI 2024-2025 practical work. The system allows multiple clients to communicate concurrently, creating rooms for private discussions between users. We also aim to implement encryption to enhance the security of the conversations.
+This project is a simple messaging application designed as part of the DAI 2024-2025 practical work. The system allows multiple clients to communicate concurrently, creating rooms for private discussions between users. We also aim to implement encryption to enhance the security of the conversations.
 
 ## Features
 
@@ -16,31 +16,25 @@ This project is a simple messaging system designed as part of the DAI 2024-2025 
 
 1. **Clone the repository**
    ```sh
-   git clone https://github.com/heig-vd-dai-course/messaging-system.git
+   git clone https://github.com/Bananonymous/DAI-Labo2.git
    ```
 
 2. **Navigate to the project directory**
    ```sh
-   cd messaging-system
+   cd DAI-Labo2
    ```
 
-3. **Install dependencies** (if applicable)
-   - Ensure you have Python 3 installed (or any other language the project uses).
-   - Install any required packages using:
-     ```sh
-     pip install -r requirements.txt
-     ```
 
 ## Running the Application
 
 - **Server**: Start the server to handle client connections.
   ```sh
-  python server.py
+  java -jar java-tcp-programming-1.0-SNAPSHOT.jar server
   ```
 
-- **Client**: Start a client to connect to the server.
+- **Client**: Start a client to connect to the server (Replace localhost with the server's ip if not running both locally).
   ```sh
-  python client.py
+  java -jar java-tcp-programming-1.0-SNAPSHOT.jar client --host localhost
   ```
 
 ## Usage
