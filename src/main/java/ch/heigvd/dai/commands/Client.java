@@ -1,6 +1,9 @@
 package ch.heigvd.dai.commands;
 
 import java.io.*;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
@@ -8,6 +11,7 @@ import picocli.CommandLine;
 
 enum ClientCommand {
   SND_MSG,
+  RECV_MSG,
   CREATE_ROOM,
   HELP,
   QUIT
@@ -31,7 +35,7 @@ public class Client implements Callable<Integer> {
   @CommandLine.Option(
       names = {"-p", "--port"},
       description = "Port to use (default: ${DEFAULT-VALUE}).",
-      defaultValue = "6433")
+      defaultValue = "4242")
   protected int port;
 
   @Override
@@ -75,6 +79,33 @@ public class Client implements Callable<Integer> {
 
               request = ClientCommand.SND_MSG + " " + msg;
             }
+
+            //Receiving message using multicast ("230.0.0.0") and udp port 4343
+            case RECV_MSG -> {
+              String multicastAddress = "230.0.0.0";
+              int multicastPort = 4343;
+
+              try (MulticastSocket multicastSocket = new MulticastSocket(multicastPort)) {
+                InetAddress group = InetAddress.getByName(multicastAddress);
+                multicastSocket.joinGroup(group);
+                System.out.println("[Client] Joined multicast group " + multicastAddress + ":" + multicastPort);
+
+                System.out.println("[Client] Listening for messages...");
+                while (true) { // Continuous listening
+                  byte[] buf = new byte[256];
+                  DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                  multicastSocket.receive(packet);
+
+                  String received = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
+                  System.out.println("[Client] Received message: " + received);
+                }
+              } catch (IOException e) {
+                System.out.println("[Client] Error receiving multicast message: " + e.getMessage());
+              }
+            }
+
+
+
             case QUIT -> {
               socket.close();
               continue;
@@ -126,6 +157,16 @@ public class Client implements Callable<Integer> {
 
             String invalidMessage = serverResponseParts[1];
             System.out.println(invalidMessage);
+          }
+
+          case SENDING_MSG -> {
+            if (serverResponseParts.length < 2) {
+              System.out.println("Invalid message. Please try again.");
+              break;
+            }
+
+            String sendingMessage = serverResponseParts[1];
+            System.out.println(sendingMessage);
           }
           case null, default ->
                   System.out.println("Invalid/unknown command sent by server, ignore.");

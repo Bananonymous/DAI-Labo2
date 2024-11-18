@@ -1,8 +1,7 @@
 package ch.heigvd.dai.commands;
 
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 import picocli.CommandLine;
@@ -13,7 +12,7 @@ public class Server implements Callable<Integer> {
   @CommandLine.Option(
       names = {"-p", "--port"},
       description = "Port to use (default: ${DEFAULT-VALUE}).",
-      defaultValue = "6433")
+      defaultValue = "4242")
   protected int port;
 
   @Override
@@ -77,6 +76,20 @@ public class Server implements Callable<Integer> {
 
                 System.out.println("[Server] Received SND_MSG command with msg: " + msg);
                 System.out.println("[Server] Sending MSG to current room");
+
+                //Sending message to all clients using UDP and multicast
+                String multicastAddress = "230.0.0.0";
+                int multicastPort = 4343;
+                try (MulticastSocket multicastSocket = new MulticastSocket()) {
+                  InetAddress group = InetAddress.getByName(multicastAddress);
+                  byte[] buf = msg.getBytes(StandardCharsets.UTF_8);
+                  DatagramPacket packet = new DatagramPacket(buf, buf.length, group, multicastPort);
+                  multicastSocket.send(packet);
+                  System.out.println("[Server] Message sent to multicast group");
+                } catch (IOException e) {
+                  System.out.println("[Server] Error sending multicast message: " + e.getMessage());
+                }
+
 
                 response = ServerCommand.SENDING_MSG + " Sending to current room !";
               }
