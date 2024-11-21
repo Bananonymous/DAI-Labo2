@@ -6,8 +6,8 @@ import picocli.CommandLine;
     description = "YASMA - Yet Another Simple Messaging Application",
     version = "1.0.0",
     subcommands = {
-      Client.class,
-      Server.class,
+      ClientCmd.class,
+      ServerCmd.class,
     },
     scope = CommandLine.ScopeType.INHERIT,
     mixinStandardHelpOptions = true)
