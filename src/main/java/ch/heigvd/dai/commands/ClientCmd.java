@@ -7,6 +7,7 @@ import picocli.CommandLine;
 
 @CommandLine.Command(name = "client", description = "Start the client part of YASMA.")
 public class ClientCmd implements Callable<Integer> {
+  @CommandLine.ParentCommand protected Root parent;
 
   @CommandLine.Option(
       names = {"-H", "--host"},
@@ -14,18 +15,12 @@ public class ClientCmd implements Callable<Integer> {
       required = true)
   protected String host;
 
-  @CommandLine.Option(
-      names = {"-p", "--port"},
-      description = "Port to use (default: ${DEFAULT-VALUE}).",
-      defaultValue = "4242")
-  protected int port;
-
   @Override
   public Integer call() {
 
-    System.out.println("[Client] Connecting to " + host + " : " + port + "...");
+    System.out.println("[Client] Connecting to " + host + " : " + parent.getTCPport() + "...");
 
-    Client client = new Client(host, port, 4343);
+    Client client = new Client(host, parent.getTCPport(), parent.getUDPport());
     client.run();
 
     return 0;

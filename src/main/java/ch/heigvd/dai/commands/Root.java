@@ -11,4 +11,19 @@ import picocli.CommandLine;
     },
     scope = CommandLine.ScopeType.INHERIT,
     mixinStandardHelpOptions = true)
-public class Root {}
+public class Root {
+    @CommandLine.Option(
+            names = {"-t", "--TCPport"},
+            description = "Port to use (default: ${DEFAULT-VALUE}).",
+            defaultValue = "4242")
+    private int TCPport;
+
+    @CommandLine.Option(
+            names = {"-u", "--UDPport"},
+            description = "Port to use (default: ${DEFAULT-VALUE}).",
+            defaultValue = "4343")
+    private int UDPport;
+
+    protected int getTCPport() { return TCPport; }
+    protected int getUDPport() { return UDPport; }
+}
