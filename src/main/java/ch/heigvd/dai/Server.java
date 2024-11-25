@@ -134,8 +134,8 @@ public class Server implements Runnable {
                     } else if (splittedMessage.length < 2 && !clientInput.toUpperCase().startsWith("QUIT") && !clientInput.toUpperCase().startsWith("HELP")) {
                         out.println("Not enough parameters, please try again !");
                         continue;
-                    } else if (splittedMessage.length >= 2){
-                        if (command == ClientCommand.CREATE_ROOM) {
+                    } else if (splittedMessage.length <= 2){
+                        if (command == ClientCommand.CREATE_ROOM || command == ClientCommand.JOIN_ROOM) {
                             roomName = splittedMessage[1];
                         } else {
                             message = splittedMessage[1];
@@ -166,6 +166,19 @@ public class Server implements Runnable {
                                 out.println(roomName + " successfully created.");
                                 System.out.println(nickname + " created the room " + roomName);
                                 chatrooms.putIfAbsent(roomName, new ArrayList<>());
+                            }
+                            out.println("You joined the room " + roomName);
+                            System.out.println(nickname + " joined the room " + roomName);
+                            chatrooms.get(roomName).add(this);
+                        }
+
+                        case JOIN_ROOM -> {
+                            if (roomName == null) {
+                                out.println("No room name provided.");
+                                break;
+                            } else if (!chatrooms.containsKey(roomName)) {
+                                out.println("Room " + roomName + " does not exist.");
+                                break;
                             }
                             out.println("You joined the room " + roomName);
                             System.out.println(nickname + " joined the room " + roomName);

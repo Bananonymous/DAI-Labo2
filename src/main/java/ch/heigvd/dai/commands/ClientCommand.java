@@ -4,6 +4,7 @@ public enum ClientCommand {
   MSG,
   RECV_MSG,
   CREATE_ROOM,
+  JOIN_ROOM,
   NICK,
   HELP,
   QUIT
