@@ -73,7 +73,7 @@ public class Client implements Runnable {
                 while (!done) {
                     String clientInput = inputReader.readLine();
 
-                    if (clientInput.equals("QUIT")) {
+                    if (clientInput.equalsIgnoreCase("QUIT")) {
                         out.println(clientInput);
                         inputReader.close();
                         shutdown();
