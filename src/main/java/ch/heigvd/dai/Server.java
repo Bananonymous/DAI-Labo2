@@ -51,7 +51,7 @@ public class Server implements Runnable {
         }
     }
 
-    public void broadcast (String message) {
+    public void broadcast(String message) {
         try (MulticastSocket multicastSocket = new MulticastSocket(UDPport)) {
             InetAddress group = InetAddress.getByName(broadcastAddress);
             NetworkInterface networkInterface = NetworkInterface.getByName("lo");
@@ -128,18 +128,25 @@ public class Server implements Runnable {
                         continue;
                     }
 
-                    if (splittedMessage.length == 3) {
-                        roomName = splittedMessage[1];
-                        message = splittedMessage[2];
-                    } else if (splittedMessage.length < 2 && !clientInput.toUpperCase().startsWith("QUIT") && !clientInput.toUpperCase().startsWith("HELP")) {
+                    if (splittedMessage.length < 2 && !clientInput.toUpperCase().startsWith("QUIT") && !clientInput.toUpperCase().startsWith("HELP") &&
+                            !clientInput.toUpperCase().startsWith("LEAVE_ROOM")) {
                         out.println("Not enough parameters, please try again !");
                         continue;
-                    } else if (splittedMessage.length >= 2){
-                        if (command == ClientCommand.CREATE_ROOM) {
-                            roomName = splittedMessage[1];
+                    } else if (splittedMessage.length == 2) {
+                        if (command == ClientCommand.CREATE_ROOM || command == ClientCommand.JOIN_ROOM) {
+                            if (splittedMessage[1] == null) {
+                                out.println("No room name provided.");
+                                continue;
+                            } else if (roomName != null) {
+                                out.println("You already are in a room, please leave it using LEAVE_ROOM before joining another one.");
+                                continue;
+                            } else {
+                                roomName = splittedMessage[1];
+                            }
                         } else {
                             message = splittedMessage[1];
                         }
+
                     }
 
                     switch (command) {
@@ -159,17 +166,43 @@ public class Server implements Runnable {
                             }
                         }
                         case CREATE_ROOM -> {
-                            if (roomName == null) {
-                                out.println("No room name provided.");
-                                break;
-                            } else if (!chatrooms.containsKey(roomName)) {
+                            if (!chatrooms.containsKey(roomName) && roomName != null) {
                                 out.println(roomName + " successfully created.");
                                 System.out.println(nickname + " created the room " + roomName);
                                 chatrooms.putIfAbsent(roomName, new ArrayList<>());
                             }
+                            if(roomName == null) {
+                                out.println("No room name provided.");
+                                break;
+                            }
                             out.println("You joined the room " + roomName);
                             System.out.println(nickname + " joined the room " + roomName);
                             chatrooms.get(roomName).add(this);
+                        }
+
+                        case JOIN_ROOM -> {
+                            if (!chatrooms.containsKey(roomName)) {
+                                out.println("Room " + roomName + " does not exist.");
+                                break;
+                            }
+                            out.println("You joined the room " + roomName);
+                            System.out.println(nickname + " joined the room " + roomName);
+                            chatrooms.get(roomName).add(this);
+                        }
+
+                        case LEAVE_ROOM -> {
+                            if (!chatrooms.containsKey(roomName) && roomName != null) {
+                                out.println("Room " + roomName + " does not exist.");
+                                break;
+                            }
+                            if(roomName == null) {
+                                out.println("You are not in a room.");
+                                break;
+                            }
+                            out.println("You left the room " + roomName);
+                            System.out.println(nickname + " left the room " + roomName);
+                            chatrooms.get(roomName).remove(this);
+                            roomName = null;
                         }
                         case NICK -> {
                             broadcast(nickname + " renamed themselves to " + splittedMessage[1]);
