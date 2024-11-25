@@ -120,7 +120,7 @@ public class Server implements Runnable {
                 ClientCommand command;
                 while (!done) {
                     String clientInput = in.readLine();
-                    String[] splittedMessage = clientInput.split(" ", 3);
+                    String[] splittedMessage = clientInput.split(" ", 2);
                     try {
                         command = ClientCommand.valueOf(splittedMessage[0].toUpperCase());
                     } catch (IllegalArgumentException e) {
