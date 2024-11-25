@@ -1,6 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="2 - Start the client" type="Application" factoryName="Application">
-    <option name="ALTERNATIVE_JRE_PATH" value="21" />
+  <configuration default="false" name="3 - Start the client 2" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="ch.heigvd.dai.Main" />
     <module name="java-tcp-programming" />
     <option name="PROGRAM_PARAMETERS" value="client --host localhost" />
