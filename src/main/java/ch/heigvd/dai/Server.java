@@ -17,16 +17,45 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Server implementation of the application.<br>
+ * <br>
+ * The <code>Server</code>s will listen to <code>Client</code>s connection and will accept them to allow multiple
+ * <code>Client</code>s to chat with each other either via the global chat or private rooms they through the
+ * <code>CREATE_ROOM</code>/<code>JOIN_ROOM</code>/<code>LEAVE_ROOM</code> commands.<br>
+ * <br>
+ * <code>Server</code>s connects to the <code>Clients</code> through TCP to receive their messages, and then resend
+ * those messages to global chat through UDP or private room chats through the same TCP Socket used for receiving.<br>
+ * <br>
+ * Implements <code>Runnable</code><br>.
+ * Uses Buffered inputs and outputs.<br>
+ * Manages one <code>Thread</code> per TCP connection and one <code>Thread</code> for UDP through an
+ * <code>Executor</code> pool.
+ *
+ * @author Léon Surbeck
+ * @author Nicolas Carbonara
+ * @version 1.0
+ * @see Client
+ * @see ch.heigvd.dai.commands.ClientCommand
+ * @see ch.heigvd.dai.commands.ServerCommand
+ */
 public class Server implements Runnable {
     private ServerSocket server;
     private final int TCPport;
     private final int UDPport;
-    private ArrayList<ConnectionHandler> connections;
-    private Map<String, ArrayList<ConnectionHandler>> chatrooms;
+    private final ArrayList<ConnectionHandler> connections;
+    private final Map<String, ArrayList<ConnectionHandler>> chatrooms;
     private final String broadcastAddress;
 
     private boolean done;
 
+    /**
+     * Default Constructor for the class.
+     *
+     * @param TCPport           Port used for the receiving of messages from clients
+     * @param UDPport           Port used for the multiclass of the UDP global channel
+     * @param broadcastAddress  IP address used for the multiclass of the UDP global channel
+     */
     public Server(int TCPport, int UDPport, String broadcastAddress) {
         this.TCPport = TCPport;
         this.UDPport = UDPport;
@@ -36,6 +65,16 @@ public class Server implements Runnable {
         done = false;
     }
 
+    /**
+     * Main function of the class, used to run the <code>Server</code>>.<br>
+     * <br>
+     * Will loop infinitely if command <code>QUIT</code> is not entered.<br>
+     * <br>
+     * Uses multi-treading to listen and send data over TCP and UDP ports.<br>
+     * If an <code>Exception</code> is raised, calls the <code>shutdown()</code> method.
+     *
+     * @see Server#shutdown()
+     */
     @Override
     public void run() {
         try (ExecutorService threads = Executors.newCachedThreadPool()) {
@@ -51,6 +90,11 @@ public class Server implements Runnable {
         }
     }
 
+    /**
+     * Broadcast (multicast) the messages to the global channel.
+     *
+     * @param message   A message received from a client
+     */
     public void broadcast(String message) {
         try (MulticastSocket multicastSocket = new MulticastSocket(UDPport)) {
             InetAddress group = InetAddress.getByName(broadcastAddress);
@@ -68,6 +112,14 @@ public class Server implements Runnable {
         }
     }
 
+    /**
+     * Used to properly terminate the <code>Server</code>.<br>
+     * <br>
+     * Can be called by the <code>Server</code> directly through the <code>QUIT</code> command or as an
+     * <code>Exception</code> handling method.
+     *
+     * @see Server#run() Server.run()
+     */
     public void shutdown() {
         try {
             done = true;
@@ -85,17 +137,40 @@ public class Server implements Runnable {
         }
     }
 
+    /**
+     * Represents the <code>Client</code>s' connections to the <code>Server</code>.<br>
+     * <br>
+     * Implements <code>Runnable</code>.
+     *
+     * @author Nicolas Carbonara
+     * @version 1.0
+     * @since 1.0
+     */
     protected class ConnectionHandler implements Runnable {
 
-        private Socket client;
+        private final Socket client;
         private BufferedReader in;
         private PrintWriter out;
         private String nickname;
 
+        /**
+         * Default Constructor for the class.
+         *
+         * @param client The socket created by the <code>Server</code>
+         */
         protected ConnectionHandler(Socket client) {
             this.client = client;
         }
 
+        /**
+         * Main function of the class, used to interact with the <code>Client</code>s.<br>
+         * <br>
+         * Loops infinitely if command <code>QUIT</code> is not entered. If entered, will <code>shutdown</code> the
+         * connection with the distant <code>Client</code>.
+         * If an <code>Exception</code> is raised, calls the <code>shutdown()</code> method.
+         *
+         * @see ConnectionHandler#shutdown()
+         */
         @Override
         public void run() {
             try {
@@ -224,6 +299,16 @@ public class Server implements Runnable {
             }
         }
 
+        /**
+         * Used to properly terminate a <code>Client</code>'s connection.<br>
+         * <br>
+         * Can be called by the <code>Client</code> directly through the <code>QUIT</code> command, in response to a
+         * <code>Server</code> shutdown or as an <code>Exception</code> handling method.
+         *
+         * @see Client.InputHandler#run()
+         * @see Client.UDPListener#run()
+         * @see ConnectionHandler#run()
+         */
         protected void shutdown() {
             try {
                 in.close();
@@ -237,6 +322,9 @@ public class Server implements Runnable {
             }
         }
 
+        /**
+         * Displays the help menu for each of the available <code>ClientCommand</code>.
+         */
         protected void help() {
             out.println("Usage:");
             out.println("  " + ClientCommand.MSG + " [room name] <msg> - Send message to the target room if specified else sends it to global chat.");
@@ -246,6 +334,11 @@ public class Server implements Runnable {
             out.println("  " + ClientCommand.QUIT + " - Close the connection to the server.");
         }
 
+        /**
+         * Sends the client message over TCP.<br>
+         * Used when chatting in a private room.
+         * @param message   The message received from the client
+         */
         protected void sendMessage(String message) {
             out.println(message);
         }

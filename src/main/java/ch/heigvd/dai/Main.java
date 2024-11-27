@@ -4,6 +4,15 @@ import ch.heigvd.dai.commands.Root;
 import java.io.File;
 import picocli.CommandLine;
 
+/**
+ * Main program used to parse the command line to launch the correct subprograms using PicoCLI API.<br>
+ *
+ * @author Professor Ludovic Delafontaine
+ * @author Professor Hadrien Louis
+ * @author Assitant Silvestri Geraud
+ * @version 1.0
+ * @see Root Root
+ */
 public class Main {
 
   public static void main(String[] args) {
