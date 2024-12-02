@@ -12,34 +12,55 @@ This project is a simple messaging application designed as part of the DAI 2024-
 - **Private discussion rooms**: Users can create and join private discussion rooms to communicate securely with each other.
 - **Encryption (Optional)**: If possible, we will add encryption to ensure the confidentiality of the messages exchanged between users.
 
-## Setup and Installation
+# How to Use / Run on Your Own Machine
 
-1. **Clone the repository**
-   ```sh
-   git clone https://github.com/Bananonymous/DAI-Labo2.git
-   ```
+This part explains how to run the `dai-lab02-yasma` container image on your local machine.
 
-2. **Navigate to the project directory**
-   ```sh
-   cd DAI-Labo2
-   ```
+## Prerequisites
 
+1. Install Docker on your system. Follow the instructions at [Get Docker](https://docs.docker.com/get-docker/).
 
 ## Running the Application
 
-- **Server**: Start the server to handle client connections.
-  ```sh
-  java -jar java-tcp-programming-1.0-SNAPSHOT.jar server
-  ```
+### Pull the Image
 
-- **Client**: Start a client to connect to the server (Replace localhost with the server's ip if not running both locally).
-  ```sh
-  java -jar java-tcp-programming-1.0-SNAPSHOT.jar client --host localhost
-  ```
+First, pull the container image from GitHub Packages:
 
-## Usage
+```bash
+docker pull ghcr.io/bananonymous/dai-lab02-yasma:latest
+```
 
-- **TODO**: What happens when TODO 
+### Running the Server
+
+To run the application in server mode, execute the following command:
+
+```bash
+docker run --rm -it --net=host ghcr.io/bananonymous/dai-lab02-yasma:latest server
+```
+
+### Running the Client
+
+To run the application in client mode, execute the following command:
+
+```bash
+docker run --rm -it --net=host ghcr.io/bananonymous/dai-lab02-yasma:latest client --host=localhost
+```
+
+### Explanation of `--net=host`
+
+The `--net=host` flag is necessary because the application uses UDP multicast, which is not natively supported within Docker's default network configurations. Using `--net=host` allows the container to use the host's network stack, enabling proper multicast communication.
+
+## Notes
+
+- The `--rm` flag ensures that the container is automatically removed after it stops running.
+- The `-it` flag allows interactive input and output.
+
+If you encounter any issues, please open an issue in the [GitHub repository](https://github.com/Bananonymous/dai-lab02-yasma/issues).
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
+
 
 ## Future Improvements
 
