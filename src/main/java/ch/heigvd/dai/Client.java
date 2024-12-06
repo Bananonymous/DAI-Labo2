@@ -1,10 +1,17 @@
 package ch.heigvd.dai;
 
+import ch.heigvd.dai.commands.ClientCmd;
+import ch.heigvd.dai.commands.ClientCommand;
+import ch.heigvd.dai.commands.ServerCommand;
+
+import javax.smartcardio.CommandAPDU;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.*;
+import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * Client implementation of the application.<br>
@@ -75,15 +82,25 @@ public class Client implements Runnable {
             udpListener.setDaemon(true);
             udpListener.start();
 
-            InputHandler inHandler = new InputHandler();
-            Thread inputThread = new Thread(inHandler);
+            Thread inputThread = new Thread(new InputHandler());
             inputThread.setDaemon(true);
             inputThread.start();
 
+            String serverMessage;
             while (!done) {
-                String inMessage = in.readLine();
-                System.out.println(inMessage);
+                if (in.ready() && (serverMessage = in.readLine()) != null) {
+                    System.out.println(serverMessage);
+                }
+
+                // Used as a busy-waiting to avoid blockage on the in.readline()
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
             }
+
+            shutdown();
         } catch (IOException e) {
             shutdown();
         }
@@ -136,15 +153,126 @@ public class Client implements Runnable {
         @Override
         public void run() {
             try (BufferedReader inputReader = new BufferedReader(new InputStreamReader(System.in))) {
-                while (!done) {
-                    String clientInput = inputReader.readLine();
+                out.println(inputReader.readLine());
 
-                    if (clientInput.equalsIgnoreCase("QUIT")) {
-                        out.println(clientInput);
-                        inputReader.close();
-                        shutdown();
-                    } else {
-                        out.println(clientInput);
+                ClientCommand command;
+                String serverAnswer;
+                String[] splittedServerAnswer;
+                String clientInput;
+                while (!done) {
+                    clientInput = inputReader.readLine();
+
+                    String[] splittedMessage = clientInput.split(" ", 2);
+
+                    try {
+                        command = ClientCommand.valueOf(splittedMessage[0].toUpperCase());
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Unrecognised command, please try again");
+                        continue;
+                    }
+
+                    switch (command) {
+                        case MSG -> {
+                            if (splittedMessage.length < 2) {
+                                System.out.println("No message provided.");
+                                continue;
+                            }
+
+                            out.println(clientInput);
+                            serverAnswer = in.readLine();
+                            splittedServerAnswer = serverAnswer.split(" ", 2);
+
+                            if (splittedServerAnswer[0].equals(ServerCommand.ERROR.toString())) {
+                                if (splittedServerAnswer[1].equals("1")) {
+                                    System.out.println("The message is empty!");
+                                }
+                            } else if (splittedServerAnswer.length == 2 && splittedServerAnswer[0].equals(ServerCommand.OK.toString())) {
+                                System.out.println(splittedServerAnswer[1]);
+                            } else if (splittedServerAnswer[0].equals(ServerCommand.OK.toString())){
+                                System.out.println(splittedServerAnswer[0]);
+                            }
+                        }
+                        case CREATE_ROOM -> {
+                            if (splittedMessage.length < 2) {
+                                System.out.println("No room name provided.");
+                                continue;
+                            }
+
+                            out.println(clientInput);
+                            serverAnswer = in.readLine();
+                            splittedServerAnswer = serverAnswer.split(" ", 2);
+
+                            if (splittedServerAnswer[0].equals(ServerCommand.ERROR.toString())) {
+                                switch (splittedServerAnswer[1]) {
+                                    case "1" -> System.out.println("No room name provided!");
+                                    case "2" -> System.out.println("A room with the specified name already exists. Try joining it instead.");
+                                    case "3" -> System.out.println("You already are in a room. Leave the current room before creating a new one.");
+                                }
+                            } else if (splittedServerAnswer[0].equals(ServerCommand.OK.toString())) {
+                                System.out.println(splittedMessage[1] + " room created successfully.");
+                            }
+                        }
+                        case JOIN_ROOM -> {
+                            if (splittedMessage.length < 2) {
+                                System.out.println("No room name provided.");
+                                continue;
+                            }
+
+                            out.println(clientInput);
+                            serverAnswer = in.readLine();
+                            splittedServerAnswer = serverAnswer.split(" ", 2);
+
+                            if (splittedServerAnswer[0].equals(ServerCommand.ERROR.toString())) {
+                                switch (splittedServerAnswer[1]) {
+                                    case "1" -> System.out.println("No room name provided.");
+                                    case "2" -> System.out.println("No room with the specified name were found. Make sure the name is correct or try joining it instead.");
+                                    case "3" -> System.out.println("You already are in a room. Leave the current room before joining a new one.");
+                                }
+                            } else if (splittedServerAnswer[0].equals(ServerCommand.OK.toString())) {
+                                System.out.println("You joined the room " + splittedMessage[1]);
+                            }
+                        }
+                        case LEAVE_ROOM -> {
+                            out.println(clientInput);
+                            serverAnswer = in.readLine();
+                            splittedServerAnswer = serverAnswer.split(" ", 2);
+
+                            if (splittedServerAnswer[0].equals(ServerCommand.ERROR.toString())) {
+                                if (splittedServerAnswer[1].equals("1")) {
+                                    System.out.println("You are not in a room, try joining or creating one before.");
+                                }
+                            } else if (splittedServerAnswer[0].equals(ServerCommand.OK.toString())) {
+                                System.out.println("You left the room.");
+                            }
+                        }
+                        case NICK -> {
+                            if (splittedMessage.length < 2 || splittedMessage[1].isEmpty()) {
+                                System.out.println("No nickname provided.");
+                                continue;
+                            }
+
+                            out.println(clientInput);
+                            serverAnswer = in.readLine();
+                            splittedServerAnswer = serverAnswer.split(" ", 2);
+
+                            if (splittedServerAnswer[0].equals(ServerCommand.ERROR.toString())) {
+                                if (splittedServerAnswer[1].equals("1")) {
+                                    System.out.println("The nickname is empty!");
+                                }
+                            }
+                        }
+                        case HELP -> {
+                            out.println(clientInput);
+                            System.out.println(in.readLine());
+                            for (ClientCommand c :  ClientCommand.values()) {
+                                System.out.println(in.readLine());
+                            }
+                        }
+                        case QUIT -> {
+                            out.println(clientInput);
+                            shutdown();
+                        }
+                        default -> { System.out.println("Command not recognised."); }
                     }
                 }
             } catch (IOException e) {
