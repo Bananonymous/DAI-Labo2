@@ -46,6 +46,8 @@ To run the application in client mode, execute the following command:
 docker run --rm -it --net=host ghcr.io/bananonymous/dai-lab02-yasma:latest client --host=localhost
 ```
 
+You should replace localhost with the actual IP of the server running the application (Or keep it if you are running the client and server on the same machine)
+
 ### Explanation of `--net=host`
 
 The `--net=host` flag is necessary because the application uses UDP multicast, which is not natively supported within Docker's default network configurations. Using `--net=host` allows the container to use the host's network stack, enabling proper multicast communication.
