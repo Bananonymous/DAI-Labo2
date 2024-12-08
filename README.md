@@ -57,11 +57,6 @@ The `--net=host` flag is necessary because the application uses UDP multicast, w
 
 If you encounter any issues, please open an issue in the [GitHub repository](https://github.com/Bananonymous/dai-lab02-yasma/issues).
 
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
-
-
 ## Future Improvements
 
 - **Encryption**: We plan to implement end-to-end encryption for all messages to enhance security.
