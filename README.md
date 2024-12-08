@@ -57,10 +57,10 @@ The `--net=host` flag is necessary because the application uses UDP multicast, w
 
 If you encounter any issues, please open an issue in the [GitHub repository](https://github.com/Bananonymous/dai-lab02-yasma/issues).
 
-## License
+## Protocol
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
-
+The protocol can be found in the [Wiki](https://github.com/Bananonymous/DAI-Labo2/wiki) of this repository and describes how our application should work.
+As most (if not all) of the Client's *Commands* have the same error returning patern, we decided not to copy-paste the same diagram for each of them thus only having one *Error Example*.
 
 ## Future Improvements
 
