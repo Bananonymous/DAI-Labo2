@@ -147,7 +147,6 @@ public class Server implements Runnable {
      * @since 1.0
      */
     protected class ConnectionHandler implements Runnable {
-
         private final Socket client;
         private BufferedReader in;
         private PrintWriter out;
@@ -190,50 +189,36 @@ public class Server implements Runnable {
                 // Announcing to every client the newly arrived friend :D (public chatroom)
                 broadcast(nickname + " joined the server, say hi !");
 
-                String message = "";
+                String message;
                 String roomName = null;
                 ClientCommand command;
+                String clientInput;
                 while (!done) {
-                    String clientInput = in.readLine();
+                    clientInput = in.readLine();
                     String[] splittedMessage = clientInput.split(" ", 2);
                     try {
                         command = ClientCommand.valueOf(splittedMessage[0].toUpperCase());
                     } catch (IllegalArgumentException e) {
-                        out.println("Unrecognised command, please try again");
+                        out.println(ServerCommand.INVALID + " Unrecognised command, please try again");
                         continue;
                     }
 
-                    if (splittedMessage.length < 2 && !clientInput.toUpperCase().startsWith("QUIT") && !clientInput.toUpperCase().startsWith("HELP") &&
-                            !clientInput.toUpperCase().startsWith("LEAVE_ROOM")) {
-                        out.println("Not enough parameters, please try again !");
-                        continue;
-                    } else if (splittedMessage.length == 2) {
-                        if (command == ClientCommand.CREATE_ROOM || command == ClientCommand.JOIN_ROOM) {
-                            if (splittedMessage[1] == null) {
-                                out.println("No room name provided.");
-                                continue;
-                            } else if (roomName != null) {
-                                out.println("You already are in a room, please leave it using LEAVE_ROOM before joining another one.");
-                                continue;
-                            } else {
-                                roomName = splittedMessage[1];
-                            }
-                        } else {
-                            message = splittedMessage[1];
-                        }
-
-                    }
 
                     switch (command) {
                         case MSG -> {
+                            if (splittedMessage.length < 2 || splittedMessage[1].isBlank()) {
+                                out.println(ServerCommand.ERROR + " 1");
+                                continue;
+                            }
+
+                            message = splittedMessage[1];
+
+                            out.println(ServerCommand.OK);
                             if (roomName == null) {
                                 broadcast(nickname + ": " + message);
-
-                                // Server logging
-                                System.out.println(this.nickname + " in public channel sends : " + message);
                             } else {
                                 for (ConnectionHandler ch : chatrooms.get(roomName)) {
-                                    ch.sendMessage(nickname + ": " + message);
+                                    ch.out.println(nickname + ": " + message);
                                 }
 
                                 // Server logging
@@ -241,48 +226,68 @@ public class Server implements Runnable {
                             }
                         }
                         case CREATE_ROOM -> {
-                            if (!chatrooms.containsKey(roomName) && roomName != null) {
-                                out.println(roomName + " successfully created.");
-                                System.out.println(nickname + " created the room " + roomName);
-                                chatrooms.putIfAbsent(roomName, new ArrayList<>());
+                            if (roomName != null) {
+                                out.println(ServerCommand.ERROR + " 3");
+                                continue;
+                            } else if (splittedMessage.length < 2) {
+                                out.println(ServerCommand.ERROR + " 1");
+                                continue;
+                            } else {
+                                if (chatrooms.containsKey(splittedMessage[1])) {
+                                    out.println(ServerCommand.ERROR + " 2");
+                                    continue;
+                                } else {
+                                    roomName = splittedMessage[1];
+                                }
                             }
-                            if(roomName == null) {
-                                out.println("No room name provided.");
-                                break;
-                            }
-                            out.println("You joined the room " + roomName);
-                            System.out.println(nickname + " joined the room " + roomName);
+
+                            out.println(ServerCommand.OK);
+                            System.out.println(nickname + " created the room " + roomName);
+                            chatrooms.putIfAbsent(roomName, new ArrayList<>());
                             chatrooms.get(roomName).add(this);
                         }
 
                         case JOIN_ROOM -> {
-                            if (!chatrooms.containsKey(roomName)) {
-                                out.println("Room " + roomName + " does not exist.");
-                                break;
+                            if (roomName != null) {
+                                out.println(ServerCommand.ERROR + " 3");
+                                continue;
+                            } else if (splittedMessage.length < 2) {
+                                out.println(ServerCommand.ERROR + " 1");
+                                continue;
+                            } else {
+                                if (!chatrooms.containsKey(splittedMessage[1])) {
+                                    out.println(ServerCommand.ERROR + " 2");
+                                    continue;
+                                } else {
+                                    roomName = splittedMessage[1];
+                                }
                             }
-                            out.println("You joined the room " + roomName);
+
+                            out.println(ServerCommand.OK);
                             System.out.println(nickname + " joined the room " + roomName);
                             chatrooms.get(roomName).add(this);
                         }
 
                         case LEAVE_ROOM -> {
-                            if (!chatrooms.containsKey(roomName) && roomName != null) {
-                                out.println("Room " + roomName + " does not exist.");
-                                break;
+                            if (roomName == null) {
+                                out.println(ServerCommand.ERROR + " 1");
+                                continue;
                             }
-                            if(roomName == null) {
-                                out.println("You are not in a room.");
-                                break;
-                            }
-                            out.println("You left the room " + roomName);
+
+                            out.println(ServerCommand.OK);
                             System.out.println(nickname + " left the room " + roomName);
                             chatrooms.get(roomName).remove(this);
                             roomName = null;
                         }
                         case NICK -> {
+                            if (splittedMessage.length < 2) {
+                                out.println(ServerCommand.ERROR + " 1");
+                                continue;
+                            }
+
+                            out.println(ServerCommand.OK);
                             broadcast(nickname + " renamed themselves to " + splittedMessage[1]);
                             System.out.println(nickname + " renamed themselves to " + splittedMessage[1]);
-                            out.println("New identity confirmed, " + splittedMessage[1] + "!");
                             nickname = splittedMessage[1];
                         }
                         case HELP -> help();
@@ -290,7 +295,6 @@ public class Server implements Runnable {
                             broadcast(nickname + " departed, we will mourn them.");
                             shutdown();
                         }
-                        default -> out.println(ServerCommand.INVALID + " Unknown command. Please try again.");
                     }
                 }
 
@@ -316,6 +320,10 @@ public class Server implements Runnable {
                 if (!client.isClosed()) {
                     client.close();
                 }
+
+                for (Map.Entry<String, ArrayList<ConnectionHandler>> entry : chatrooms.entrySet()) {
+                    entry.getValue().remove(this);
+                }
             } catch (IOException e) {
                 // We simply ignore as we are shutting down the client connection.
                 // Could possibly mark function as throws IOException if we wanted to use/get that information in the calling program.
@@ -327,20 +335,13 @@ public class Server implements Runnable {
          */
         protected void help() {
             out.println("Usage:");
-            out.println("  " + ClientCommand.MSG + " [room name] <msg> - Send message to the target room if specified else sends it to global chat.");
-            out.println("  " + ClientCommand.CREATE_ROOM + " <room name> - Creates the specified room or join it if already existing.");
+            out.println("  " + ClientCommand.MSG + " <msg> - Send message to the current room if in any else sends it to global chat.");
+            out.println("  " + ClientCommand.CREATE_ROOM + " <room name> - Creates the specified room if not already existing.");
+            out.println("  " + ClientCommand.JOIN_ROOM + " <room name> - Joins the specified room if already existing.");
+            out.println("  " + ClientCommand.LEAVE_ROOM + " Leaves the current room if in any.");
             out.println("  " + ClientCommand.NICK + " - Allows you to change your nickname");
             out.println("  " + ClientCommand.HELP + " - Display this help message.");
             out.println("  " + ClientCommand.QUIT + " - Close the connection to the server.");
-        }
-
-        /**
-         * Sends the client message over TCP.<br>
-         * Used when chatting in a private room.
-         * @param message   The message received from the client
-         */
-        protected void sendMessage(String message) {
-            out.println(message);
         }
     }
 }
